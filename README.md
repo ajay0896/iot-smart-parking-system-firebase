@@ -106,6 +106,14 @@ Project ini merupakan implementasi sistem parkir pintar yang mengintegrasikan ha
   - ESP32Servo
   - NTPClient
 
+## 🎛️ Desain PCB
+
+Berikut adalah desain PCB untuk sistem parkir cerdas ini:
+
+![PCB Design - Kelompok 10](docs/images/design-pcb.png)
+
+*Gambar: Desain PCB dengan rangkaian ESP32, RFID Reader, LCD Display, Servo Motor, dan Buzzer*
+
 ## 📦 Instalasi
 
 ### 1. Clone Repository
