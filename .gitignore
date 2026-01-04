@@ -1,0 +1,47 @@
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Firebase
+.firebase/
+.firebaserc
+firebase-debug.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+build/
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*.old
+
+# OS files
+Thumbs.db
+desktop.ini
+
+# Arduino
+*.hex
+*.bin
+*.elf
+
+# Documentation drafts (keep only final docs)
+*_DRAFT.md
+*_OLD.md
+*_BACKUP.md

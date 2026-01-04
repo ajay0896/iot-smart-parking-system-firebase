@@ -1,0 +1,44 @@
+{
+  "users": {
+    "99887766": {
+      "nama": "Dedi Corbuzier",
+      "password": "gym",
+      "saldo": 950000,
+      "status_terakhir": "BARU",
+      "wa": "081122334455",
+      "timestamp_masuk": 0
+    },
+    "07780E06": {
+      "nama": "ajay",
+      "password": "ajay123",
+      "saldo": 35000,
+      "status_terakhir": "KELUAR",
+      "wa": "089663956716",
+      "timestamp_masuk": 0
+    },
+    "A1B2C3D4": {
+      "nama": "Budi Santoso",
+      "password": "123",
+      "saldo": 47000,
+      "status_terakhir": "KELUAR",
+      "wa": "08123456789",
+      "timestamp_masuk": 0
+    },
+    "B348EB56": {
+      "nama": "fajar ramdani",
+      "password": "ajay123",
+      "saldo": 44000,
+      "status_terakhir": "KELUAR",
+      "wa": "089663956717",
+      "timestamp_masuk": 0
+    },
+    "E5F6G7H8": {
+      "nama": "Siti Aminah",
+      "password": "abc",
+      "saldo": 15000,
+      "status_terakhir": "MASUK",
+      "wa": "08987654321",
+      "timestamp_masuk": 0
+    }
+  }
+}

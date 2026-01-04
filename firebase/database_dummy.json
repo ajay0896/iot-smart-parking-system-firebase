@@ -1,0 +1,76 @@
+{
+  "system": {
+    "mode": "NORMAL",
+    "temp_rfid": ""
+  },
+  "users": {
+    "A1B2C3D4": {
+      "nama": "Budi Santoso",
+      "password": "123",
+      "saldo": 47000,
+      "status_terakhir": "KELUAR",
+      "wa": "08123456789"
+    },
+    "E5F6G7H8": {
+      "nama": "Siti Aminah",
+      "password": "abc",
+      "saldo": 15000,
+      "status_terakhir": "MASUK",
+      "wa": "08987654321"
+    },
+    "99887766": {
+      "nama": "Dedi Corbuzier",
+      "password": "gym",
+      "saldo": 950000,
+      "status_terakhir": "BARU",
+      "wa": "081122334455"
+    }
+  },
+  "logs": {
+    "1710001000": {
+      "biaya": 0,
+      "gate": "MASUK",
+      "nama": "Budi Santoso",
+      "status": "Check-In",
+      "timestamp": 1710001000,
+      "uid": "A1B2C3D4",
+      "waktu": "08:00:00"
+    },
+    "1710002500": {
+      "biaya": 0,
+      "gate": "MASUK",
+      "nama": "Siti Aminah",
+      "status": "Check-In",
+      "timestamp": 1710002500,
+      "uid": "E5F6G7H8",
+      "waktu": "08:25:00"
+    },
+    "1710005000": {
+      "biaya": 3000,
+      "gate": "KELUAR",
+      "nama": "Budi Santoso",
+      "status": "Check-Out",
+      "timestamp": 1710005000,
+      "uid": "A1B2C3D4",
+      "waktu": "09:05:00"
+    },
+    "1710006000": {
+      "biaya": 0,
+      "gate": "MASUK",
+      "nama": "Dedi Corbuzier",
+      "status": "Check-In",
+      "timestamp": 1710006000,
+      "uid": "99887766",
+      "waktu": "09:30:00"
+    },
+    "1710007200": {
+      "biaya": 3000,
+      "gate": "KELUAR",
+      "nama": "Dedi Corbuzier",
+      "status": "Check-Out",
+      "timestamp": 1710007200,
+      "uid": "99887766",
+      "waktu": "10:00:00"
+    }
+  }
+}
