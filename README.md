@@ -456,6 +456,13 @@ Troubleshooting lengkap: [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
       </a><br />
       <sub>Contributor</sub>
     </td>
+    <td align="center">
+      <a href="https://github.com/naysal37">
+        <img src="https://github.com/naysal37.png" width="100px;" alt="Naysal"/><br />
+        <sub><b>Naysal</b></sub>
+      </a><br />
+      <sub>Contributor</sub>
+    </td>
   </tr>
 </table>
 
