@@ -449,6 +449,13 @@ Troubleshooting lengkap: [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
       </a><br />
       <sub>Developer</sub>
     </td>
+    <td align="center">
+      <a href="https://github.com/Bivvean">
+        <img src="https://github.com/Bivvean.png" width="100px;" alt="Bilal"/><br />
+        <sub><b>Bilal</b></sub>
+      </a><br />
+      <sub>Contributor</sub>
+    </td>
   </tr>
 </table>
 
