@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Parkir IoT - SISTER (With Top-Up)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
+        .card-custom { border: none; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: 0.3s; }
+        .card-custom:hover { transform: translateY(-5px); }
+        .spinner-scan { width: 4rem; height: 4rem; border-width: 0.3em; }
+        .bg-gradient-primary { background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); }
+        .status-badge { font-size: 0.85em; padding: 0.5em 1em; border-radius: 20px; }
+        .blink-text { animation: blinker 1.5s linear infinite; font-weight: bold; color: #0d6efd; }
+        @keyframes blinker { 50% { opacity: 0; } }
+        [v-cloak] { display: none; }
+        .login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .stat-card-success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; }
+        .stat-card-warning { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
+    </style>
+</head>
+<body>
+
+<div id="app" v-cloak>
+    <!-- HALAMAN LOGIN ADMIN -->
+    <div v-if="!isAdminLoggedIn && view === 'admin-login'" class="login-container">
+        <div class="card card-custom" style="max-width: 400px; width: 100%;">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    <i class="fas fa-user-shield fa-3x text-primary mb-3"></i>
+                    <h4 class="fw-bold">Admin Login</h4>
+                    <p class="text-muted small">Masukkan kredensial admin</p>
+                </div>
+                <form @submit.prevent="loginAdmin">
+                    <div class="mb-3">
+                        <label class="form-label small">Username</label>
+                        <input v-model="adminForm.username" type="text" class="form-control" placeholder="admin" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Password</label>
+                        <input v-model="adminForm.password" type="password" class="form-control" required>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary py-2">
+                            <i class="fas fa-sign-in-alt"></i> Masuk
+                        </button>
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="#" @click.prevent="view = 'home'" class="text-muted small">Kembali ke Beranda</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- NAVBAR -->
+    <nav v-if="isAdminLoggedIn || view !== 'admin-login'" class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 py-3">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#" @click.prevent="view = isAdminLoggedIn ? 'admin-dashboard' : 'home'">
+                <i class="fas fa-parking text-warning"></i> SISTER PARKIR
+                <span v-if="isAdminLoggedIn" class="badge bg-danger ms-2">ADMIN</span>
+            </a>
+            <div class="d-flex gap-2">
+                <button v-if="isAdminLoggedIn && view !== 'admin-dashboard'" @click="view = 'admin-dashboard'" class="btn btn-outline-light btn-sm rounded-pill px-3">
+                    <i class="fas fa-home"></i> Dashboard
+                </button>
+                <button v-if="!isAdminLoggedIn && view !== 'home'" @click="view = 'home'" class="btn btn-outline-light btn-sm rounded-pill px-3">
+                    <i class="fas fa-home"></i> Menu Utama
+                </button>
+                <button v-if="!isAdminLoggedIn" @click="view = 'admin-login'" class="btn btn-warning btn-sm rounded-pill px-3">
+                    <i class="fas fa-user-shield"></i> Admin
+                </button>
+                <button v-if="isAdminLoggedIn" @click="logoutAdmin" class="btn btn-danger btn-sm rounded-pill px-3">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container pb-5">
+        
+        <!-- HALAMAN HOME (USER) -->
+        <div v-if="view === 'home' && !isAdminLoggedIn" class="row g-4 justify-content-center">
+            <div class="col-12 text-center mb-2">
+                <h3 class="fw-bold text-dark">Dashboard Kontrol</h3>
+                <p class="text-muted">Pilih menu untuk memulai</p>
+            </div>
+
+            <div class="col-md-4 col-sm-6">
+                <div class="card card-custom h-100" @click="view = 'register'" style="cursor: pointer;">
+                    <div class="card-body text-center p-5">
+                        <div class="bg-light rounded-circle d-inline-block p-3 mb-3">
+                            <i class="fas fa-user-plus fa-3x text-primary"></i>
+                        </div>
+                        <h5>Registrasi User</h5>
+                        <p class="text-muted small mb-0">Daftarkan kartu baru</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 col-sm-6">
+                <div class="card card-custom h-100" @click="view = 'logs'" style="cursor: pointer;">
+                    <div class="card-body text-center p-5">
+                        <div class="bg-light rounded-circle d-inline-block p-3 mb-3">
+                            <i class="fas fa-chart-line fa-3x text-success"></i>
+                        </div>
+                        <h5>Data Transaksi</h5>
+                        <p class="text-muted small mb-0">Lihat aktivitas realtime</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 col-sm-6">
+                <div class="card card-custom h-100" @click="showTopupPrompt" style="cursor: pointer;">
+                    <div class="card-body text-center p-5">
+                        <div class="bg-light rounded-circle d-inline-block p-3 mb-3">
+                            <i class="fas fa-wallet fa-3x text-warning"></i>
+                        </div>
+                        <h5>Top-Up Saldo</h5>
+                        <p class="text-muted small mb-0">Isi ulang saldo dengan voucher</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HALAMAN ADMIN DASHBOARD -->
+        <div v-if="view === 'admin-dashboard' && isAdminLoggedIn">
+            <h3 class="fw-bold mb-4"><i class="fas fa-tachometer-alt"></i> Dashboard Admin</h3>
+            
+            <!-- STATISTIK -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-4">
+                    <div class="card stat-card card-custom">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <p class="mb-1 opacity-75">Total Users</p>
+                                    <h2 class="fw-bold mb-0">{{ totalUsers }}</h2>
+                                </div>
+                                <i class="fas fa-users fa-3x opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card-success card-custom">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <p class="mb-1 opacity-75">Total Transaksi</p>
+                                    <h2 class="fw-bold mb-0">{{ totalLogs }}</h2>
+                                </div>
+                                <i class="fas fa-receipt fa-3x opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card-warning card-custom">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <p class="mb-1 opacity-75">Kendaraan Parkir</p>
+                                    <h2 class="fw-bold mb-0">{{ currentParked }}</h2>
+                                </div>
+                                <i class="fas fa-car fa-3x opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MENU ADMIN -->
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card card-custom" @click="view = 'admin-users'" style="cursor: pointer;">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                                    <i class="fas fa-users fa-2x text-primary"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-1">Kelola Pengguna</h5>
+                                    <p class="text-muted small mb-0">Lihat & kelola data pengguna</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card card-custom" @click="view = 'admin-logs'" style="cursor: pointer;">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-success bg-opacity-10 rounded-circle p-3 me-3">
+                                    <i class="fas fa-list fa-2x text-success"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-1">Semua Transaksi</h5>
+                                    <p class="text-muted small mb-0">Monitor semua aktivitas</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card card-custom" @click="view = 'admin-search'" style="cursor: pointer;">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-warning bg-opacity-10 rounded-circle p-3 me-3">
+                                    <i class="fas fa-search fa-2x text-warning"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-1">Cari Per User</h5>
+                                    <p class="text-muted small mb-0">Cari berdasarkan No. WA</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card card-custom" @click="view = 'admin-notifications'" style="cursor: pointer;">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-info bg-opacity-10 rounded-circle p-3 me-3">
+                                    <i class="fas fa-bell fa-2x text-info"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-1">Konfigurasi Notifikasi</h5>
+                                    <p class="text-muted small mb-0">WhatsApp/Telegram API</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card card-custom" @click="view = 'admin-vouchers'" style="cursor: pointer;">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-danger bg-opacity-10 rounded-circle p-3 me-3">
+                                    <i class="fas fa-ticket-alt fa-2x text-danger"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-1">Kelola Voucher</h5>
+                                    <p class="text-muted small mb-0">Generate & kelola voucher top-up</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADMIN: KELOLA PENGGUNA -->
+        <div v-if="view === 'admin-users' && isAdminLoggedIn">
+            <h4 class="fw-bold mb-4"><i class="fas fa-users"></i> Kelola Pengguna</h4>
+            <div class="card card-custom">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>UID</th>
+                                    <th>Nama</th>
+                                    <th>No. WhatsApp</th>
+                                    <th>Saldo</th>
+                                    <th>Status</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(user, uid) in users" :key="uid">
+                                    <td class="small text-muted">{{ uid }}</td>
+                                    <td class="fw-bold">{{ user.nama }}</td>
+                                    <td>{{ user.wa }}</td>
+                                    <td>Rp {{ formatRupiah(user.saldo) }}</td>
+                                    <td>
+                                        <span class="badge" :class="{
+                                            'bg-success': user.status_terakhir === 'KELUAR',
+                                            'bg-warning': user.status_terakhir === 'MASUK',
+                                            'bg-info': user.status_terakhir === 'BARU'
+                                        }">{{ user.status_terakhir }}</span>
+                                    </td>
+                                    <td>
+                                        <button @click="viewUserLogs(uid, user.wa)" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-eye"></i> Lihat
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr v-if="Object.keys(users).length === 0">
+                                    <td colspan="6" class="text-center text-muted py-4">Belum ada pengguna terdaftar</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADMIN: CARI PER USER -->
+        <div v-if="view === 'admin-search' && isAdminLoggedIn">
+            <h4 class="fw-bold mb-4"><i class="fas fa-search"></i> Cari Data Transaksi Per User</h4>
+            
+            <div class="card card-custom mb-4">
+                <div class="card-body">
+                    <form @submit.prevent="searchUserByPhone">
+                        <div class="row align-items-end">
+                            <div class="col-md-9">
+                                <label class="form-label">Nomor WhatsApp</label>
+                                <input v-model="searchPhone" type="text" class="form-control" placeholder="Contoh: 08123456789" required>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-search"></i> Cari
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div v-if="searchResult" class="card card-custom mb-3">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3">Informasi User</h5>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <p class="text-muted small mb-1">Nama</p>
+                            <p class="fw-bold">{{ searchResult.nama }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <p class="text-muted small mb-1">UID</p>
+                            <p class="fw-bold">{{ searchResult.uid }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <p class="text-muted small mb-1">Saldo</p>
+                            <p class="fw-bold text-success">Rp {{ formatRupiah(searchResult.saldo) }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <p class="text-muted small mb-1">Status</p>
+                            <span class="badge bg-primary">{{ searchResult.status_terakhir }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="filteredLogs.length > 0" class="card card-custom">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="fw-bold m-0">Riwayat Perjalanan ({{ filteredLogs.length }} transaksi)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Tanggal & Waktu</th>
+                                    <th>Gate</th>
+                                    <th>Status</th>
+                                    <th>Tarif</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="log in filteredLogs" :key="log.id">
+                                    <td class="small">{{ formatDate(log.timestamp) }} - {{ log.waktu }}</td>
+                                    <td>{{ log.gate }}</td>
+                                    <td>
+                                        <span class="badge" :class="log.status === 'Check-In' ? 'bg-success' : 'bg-danger'">
+                                            {{ log.status }}
+                                        </span>
+                                    </td>
+                                    <td class="fw-bold">{{ log.biaya ? 'Rp ' + formatRupiah(log.biaya) : '-' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div v-else-if="searchResult && filteredLogs.length === 0" class="alert alert-info">
+                <i class="fas fa-info-circle"></i> User belum memiliki riwayat perjalanan
+            </div>
+        </div>
+
+        <!-- ADMIN: SEMUA LOGS -->
+        <div v-if="view === 'admin-logs' && isAdminLoggedIn">
+            <h4 class="fw-bold mb-4"><i class="fas fa-list"></i> Semua Data Transaksi</h4>
+            <div class="card card-custom">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Waktu</th>
+                                    <th>Nama</th>
+                                    <th>No. WA</th>
+                                    <th>Gate</th>
+                                    <th>Status</th>
+                                    <th>Tarif</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="log in logs" :key="log.id">
+                                    <td class="small">{{ log.waktu }}</td>
+                                    <td class="fw-bold">{{ log.nama }} <br><small class="text-muted fw-normal">{{ log.uid }}</small></td>
+                                    <td>{{ log.wa || '-' }}</td>
+                                    <td>{{ log.gate }}</td>
+                                    <td>
+                                        <span class="badge" :class="log.status === 'Check-In' ? 'bg-success' : 'bg-danger'">
+                                            {{ log.status }}
+                                        </span>
+                                    </td>
+                                    <td class="fw-bold">{{ log.biaya ? 'Rp ' + formatRupiah(log.biaya) : '-' }}</td>
+                                </tr>
+                                <tr v-if="logs.length === 0">
+                                    <td colspan="6" class="text-center text-muted py-4">Belum ada data Transaksi</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADMIN: KONFIGURASI NOTIFIKASI -->
+        <div v-if="view === 'admin-notifications' && isAdminLoggedIn">
+            <h4 class="fw-bold mb-4"><i class="fas fa-bell"></i> Konfigurasi Notifikasi</h4>
+            
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card card-custom">
+                        <div class="card-header bg-white border-0 pt-4">
+                            <h5 class="fw-bold"><i class="fab fa-whatsapp text-success"></i> WhatsApp API</h5>
+                        </div>
+                        <div class="card-body">
+                            <form @submit.prevent="saveNotificationConfig">
+                                <div class="mb-3">
+                                    <label class="form-label">API Token</label>
+                                    <input v-model="notifConfig.whatsapp.token" type="text" class="form-control" placeholder="Masukkan API Token WhatsApp">
+                                    <small class="text-muted">Gunakan service seperti Fonnte, Wablas, atau WA Business API</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">API URL</label>
+                                    <input v-model="notifConfig.whatsapp.url" type="url" class="form-control" placeholder="https://api.whatsapp.com/...">
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input v-model="notifConfig.whatsapp.enabled" class="form-check-input" type="checkbox" id="waEnabled">
+                                    <label class="form-check-label" for="waEnabled">
+                                        Aktifkan notifikasi WhatsApp
+                                    </label>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card card-custom">
+                        <div class="card-header bg-white border-0 pt-4">
+                            <h5 class="fw-bold"><i class="fab fa-telegram text-info"></i> Telegram Bot</h5>
+                        </div>
+                        <div class="card-body">
+                            <form @submit.prevent="saveNotificationConfig">
+                                <div class="mb-3">
+                                    <label class="form-label">Bot Token</label>
+                                    <input v-model="notifConfig.telegram.token" type="text" class="form-control" placeholder="Masukkan Bot Token">
+                                    <small class="text-muted">Dapatkan dari @BotFather di Telegram</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Chat ID (Default)</label>
+                                    <input v-model="notifConfig.telegram.chatId" type="text" class="form-control" placeholder="Contoh: 123456789">
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input v-model="notifConfig.telegram.enabled" class="form-check-input" type="checkbox" id="tgEnabled">
+                                    <label class="form-check-label" for="tgEnabled">
+                                        Aktifkan notifikasi Telegram
+                                    </label>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <button @click="saveNotificationConfig" class="btn btn-primary px-5">
+                    <i class="fas fa-save"></i> Simpan Konfigurasi
+                </button>
+            </div>
+
+            <div class="card card-custom mt-4">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">Template Pesan</h6>
+                    <p class="small text-muted mb-2">Pesan yang akan dikirim saat user keluar parkir:</p>
+                    <div class="bg-light p-3 rounded">
+                        <code>
+Halo *{nama}*!<br>
+Anda telah keluar dari parkir pada {waktu}.<br>
+Tarif: Rp {biaya}<br>
+Sisa saldo: Rp {saldo}<br><br>
+Terima kasih! - SISTER PARKIR
+                        </code>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HALAMAN REGISTRASI USER -->
+        <div v-if="view === 'register' && !isAdminLoggedIn" class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <div class="card card-custom">
+                    <div class="card-header bg-white border-0 pt-4 px-4">
+                        <h5 class="fw-bold"><i class="fas fa-id-card"></i> Form Registrasi</h5>
+                    </div>
+                    <div class="card-body px-4 pb-4">
+                        <form @submit.prevent="triggerScan">
+                            <div class="mb-3">
+                                <label class="form-label small text-muted">Nama Lengkap</label>
+                                <input v-model="form.nama" type="text" class="form-control" placeholder="Contoh: Budi Santoso" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small text-muted">Nomor WhatsApp</label>
+                                <input v-model="form.wa" type="text" class="form-control" placeholder="08123456789" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small text-muted">Password Akun</label>
+                                <input v-model="form.pass" type="password" class="form-control" required>
+                            </div>
+                            
+                            <div class="d-grid mt-4">
+                                <button type="submit" class="btn btn-primary py-2 rounded-pill shadow-sm">
+                                    Lanjut Scan Kartu <i class="fas fa-arrow-right ms-2"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HALAMAN DATA Transaksi (PUBLIC) -->
+        <div v-if="view === 'logs' && !isAdminLoggedIn">
+            <h4 class="fw-bold mb-4"><i class="fas fa-history"></i> Riwayat Perjalanan Saya</h4>
+            
+            <!-- FORM INPUT NOMOR TELEPON -->
+            <div v-if="!userSearchResult" class="row justify-content-center">
+                <div class="col-md-6 col-lg-5">
+                    <div class="card card-custom">
+                        <div class="card-body p-4">
+                            <div class="text-center mb-4">
+                                <div class="bg-primary bg-opacity-10 rounded-circle d-inline-block p-3 mb-3">
+                                    <i class="fas fa-phone fa-3x text-primary"></i>
+                                </div>
+                                <h5 class="fw-bold">Verifikasi Nomor Telepon</h5>
+                                <p class="text-muted small">Masukkan nomor WhatsApp yang terdaftar untuk melihat riwayat perjalanan Anda</p>
+                            </div>
+                            <form @submit.prevent="searchUserData">
+                                <div class="mb-3">
+                                    <label class="form-label">Nomor WhatsApp</label>
+                                    <input v-model="userPhone" type="text" class="form-control form-control-lg" placeholder="08123456789" required>
+                                    <small class="text-muted">Gunakan nomor yang didaftarkan saat registrasi</small>
+                                </div>
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary btn-lg py-2">
+                                        <i class="fas fa-search"></i> Lihat Riwayat
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAMPILKAN DATA JIKA SUDAH VERIFIKASI -->
+            <div v-if="userSearchResult">
+                <!-- Info User -->
+                <div class="card card-custom mb-3">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h5 class="fw-bold mb-2">{{ userSearchResult.nama }}</h5>
+                                <p class="text-muted small mb-0">
+                                    <i class="fas fa-id-card"></i> UID: {{ userSearchResult.uid }} &nbsp;|&nbsp;
+                                    <i class="fas fa-phone"></i> {{ userSearchResult.wa }}
+                                </p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <p class="text-muted small mb-1">Saldo</p>
+                                <h4 class="fw-bold text-success mb-0">Rp {{ formatRupiah(userSearchResult.saldo) }}</h4>
+                                <span class="badge mt-2" :class="{
+                                    'bg-success': userSearchResult.status_terakhir === 'KELUAR',
+                                    'bg-warning': userSearchResult.status_terakhir === 'MASUK',
+                                    'bg-info': userSearchResult.status_terakhir === 'BARU'
+                                }">{{ userSearchResult.status_terakhir }}</span>
+                            </div>
+                        </div>
+                        <div class="text-end mt-3">
+                            <button @click="clearUserSearch" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-sign-out-alt"></i> Keluar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Riwayat Perjalanan -->
+                <div class="card card-custom">
+                    <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold m-0">Riwayat Perjalanan ({{ userFilteredLogs.length }} transaksi)</h5>
+                        <span class="badge bg-success rounded-pill">Realtime <i class="fas fa-wifi"></i></span>
+                    </div>
+                    <div class="card-body">
+                        <div v-if="userFilteredLogs.length > 0" class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Tanggal & Waktu</th>
+                                        <th>Gate</th>
+                                        <th>Status</th>
+                                        <th>Tarif</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="log in userFilteredLogs" :key="log.id">
+                                        <td class="small">{{ formatDate(log.timestamp) }} - {{ log.waktu }}</td>
+                                        <td>
+                                            <span class="badge" :class="log.gate === 'MASUK' ? 'bg-info' : 'bg-warning'">
+                                                {{ log.gate }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge" :class="log.status === 'Check-In' ? 'bg-success' : 'bg-danger'">
+                                                {{ log.status }}
+                                            </span>
+                                        </td>
+                                        <td class="fw-bold">{{ log.biaya ? 'Rp ' + formatRupiah(log.biaya) : '-' }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div v-else class="text-center py-5">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">Anda belum memiliki riwayat perjalanan</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADMIN: KELOLA VOUCHER -->
+        <div v-if="view === 'admin-vouchers' && isAdminLoggedIn">
+            <h4 class="fw-bold mb-4"><i class="fas fa-ticket-alt"></i> Kelola Voucher Top-Up</h4>
+            
+            <!-- Generate Voucher Card -->
+            <div class="card card-custom mb-4">
+                <div class="card-header bg-gradient-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-plus-circle"></i> Generate Voucher Baru</h5>
+                </div>
+                <div class="card-body">
+                    <form @submit.prevent="generateVoucher">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Nominal (Rp)</label>
+                                <select v-model="voucherForm.nominal" class="form-select" required>
+                                    <option value="10000">Rp 10.000</option>
+                                    <option value="25000">Rp 25.000</option>
+                                    <option value="50000">Rp 50.000</option>
+                                    <option value="100000">Rp 100.000</option>
+                                    <option value="200000">Rp 200.000</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Jumlah Voucher</label>
+                                <input v-model.number="voucherForm.jumlah" type="number" class="form-control" min="1" max="50" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Catatan (Opsional)</label>
+                                <input v-model="voucherForm.catatan" type="text" class="form-control" placeholder="Misal: Promo Tahun Baru">
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-magic"></i> Generate {{ voucherForm.jumlah }} Voucher
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Voucher List -->
+            <div class="card card-custom">
+                <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold m-0">Daftar Voucher ({{ Object.keys(vouchers).length }} total)</h5>
+                    <div>
+                        <button @click="voucherFilter = 'ALL'" :class="voucherFilter === 'ALL' ? 'btn-primary' : 'btn-outline-secondary'" class="btn btn-sm me-2">Semua</button>
+                        <button @click="voucherFilter = 'ACTIVE'" :class="voucherFilter === 'ACTIVE' ? 'btn-success' : 'btn-outline-success'" class="btn btn-sm me-2">Aktif</button>
+                        <button @click="voucherFilter = 'USED'" :class="voucherFilter === 'USED' ? 'btn-warning' : 'btn-outline-warning'" class="btn btn-sm">Terpakai</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Kode Voucher</th>
+                                    <th>Nominal</th>
+                                    <th>Status</th>
+                                    <th>Dibuat</th>
+                                    <th>Digunakan Oleh</th>
+                                    <th>Waktu Digunakan</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(voucher, vId) in filteredVouchers" :key="vId">
+                                    <td>
+                                        <code class="text-primary">{{ voucher.kode }}</code>
+                                        <button @click="copyToClipboard(voucher.kode)" class="btn btn-sm btn-link p-0 ms-2" title="Copy">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </td>
+                                    <td class="fw-bold">Rp {{ formatRupiah(voucher.nominal) }}</td>
+                                    <td>
+                                        <span class="badge" :class="voucher.status === 'ACTIVE' ? 'bg-success' : 'bg-secondary'">
+                                            {{ voucher.status }}
+                                        </span>
+                                    </td>
+                                    <td class="small">{{ formatDate(voucher.created_at) }}</td>
+                                    <td class="small">{{ voucher.used_by_name || '-' }}</td>
+                                    <td class="small">{{ voucher.used_at ? formatDate(voucher.used_at) : '-' }}</td>
+                                    <td>
+                                        <button v-if="voucher.status === 'ACTIVE'" @click="deleteVoucher(vId)" class="btn btn-sm btn-outline-danger" title="Hapus">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div v-if="Object.keys(filteredVouchers).length === 0" class="text-center py-5">
+                        <i class="fas fa-ticket-alt fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Belum ada voucher yang dibuat</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- USER: TOP-UP SALDO -->
+        <div v-if="view === 'topup'">
+            <h4 class="fw-bold mb-4"><i class="fas fa-wallet"></i> Top-Up Saldo</h4>
+            
+            <div class="card card-custom mb-4">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h5 class="mb-2">Informasi User</h5>
+                            <p class="mb-1"><strong>No. WhatsApp:</strong> {{ topupUserPhone }}</p>
+                            <p v-if="topupUserData" class="mb-1"><strong>Nama:</strong> {{ topupUserData.nama }}</p>
+                            <p v-if="topupUserData" class="mb-0"><strong>Saldo Saat Ini:</strong> 
+                                <span class="text-success fw-bold fs-5">Rp {{ formatRupiah(topupUserData.saldo) }}</span>
+                            </p>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <button @click="view = 'home'" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> Kembali
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-custom">
+                <div class="card-header bg-gradient-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-ticket-alt"></i> Redeem Voucher</h5>
+                </div>
+                <div class="card-body p-5 text-center">
+                    <form @submit.prevent="redeemVoucher">
+                        <div class="mb-4">
+                            <label class="form-label h5">Masukkan Kode Voucher</label>
+                            <input v-model="voucherCode" type="text" class="form-control form-control-lg text-center text-uppercase" 
+                                   placeholder="Contoh: PARKV-AB12-CD34-EF56" 
+                                   style="letter-spacing: 2px; font-family: monospace;" 
+                                   required>
+                            <small class="text-muted">Format: PARKV-XXXX-XXXX-XXXX</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg px-5" :disabled="!voucherCode">
+                            <i class="fas fa-check-circle"></i> Redeem Voucher
+                        </button>
+                    </form>
+
+                    <!-- Success Message -->
+                    <div v-if="topupSuccess" class="alert alert-success mt-4">
+                        <h5><i class="fas fa-check-circle"></i> Top-Up Berhasil!</h5>
+                        <p class="mb-1">Nominal: <strong>Rp {{ formatRupiah(topupSuccess.nominal) }}</strong></p>
+                        <p class="mb-0">Saldo Baru: <strong class="text-success">Rp {{ formatRupiah(topupSuccess.saldoBaru) }}</strong></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Riwayat Top-Up -->
+            <div v-if="topupHistory.length > 0" class="card card-custom mt-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Riwayat Top-Up Anda</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Tanggal & Waktu</th>
+                                    <th>Kode Voucher</th>
+                                    <th>Nominal</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="history in topupHistory" :key="history.timestamp">
+                                    <td class="small">{{ formatDate(history.timestamp) }}</td>
+                                    <td><code>{{ history.voucher_kode }}</code></td>
+                                    <td class="fw-bold text-success">+ Rp {{ formatRupiah(history.nominal) }}</td>
+                                    <td><span class="badge bg-success">SUCCESS</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MODAL SCANNING -->
+    <div v-if="isScanning" class="fixed-top w-100 h-100 bg-dark bg-opacity-75 d-flex align-items-center justify-content-center" style="z-index: 9999;">
+        <div class="card text-center p-5 shadow-lg border-0" style="max-width: 400px; border-radius: 20px;">
+            
+            <div v-if="!scanSuccess">
+                <div class="spinner-border text-primary spinner-scan mb-4" role="status"></div>
+                <h4 class="fw-bold mb-2">Menunggu Tap Kartu...</h4>
+                <p class="text-muted mb-4">Tempelkan kartu pada alat Gate Masuk sekarang.</p>
+                <p class="blink-text small"><i class="fas fa-satellite-dish"></i> Sistem Siap Menerima UID</p>
+                <button @click="cancelScan" class="btn btn-light rounded-pill px-4 mt-3">Batal</button>
+            </div>
+
+            <div v-else>
+                <i class="fas fa-check-circle text-success" style="font-size: 5rem;"></i>
+                <h4 class="fw-bold mt-3">Kartu Terhubung!</h4>
+                <p class="text-muted">UID: {{ tempUid }}</p>
+                <p class="small text-primary">Mengalihkan ke menu utama...</p>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import { getDatabase, ref, set, onValue, update, get } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCjRx1OXGSH_uAKDq-7ajVykOtHTNHQUwY",
+        authDomain: "siste-parkir-iot.firebaseapp.com",
+        databaseURL: "https://siste-parkir-iot-default-rtdb.firebaseio.com",
+        projectId: "siste-parkir-iot",
+        storageBucket: "siste-parkir-iot.firebasestorage.app",
+        messagingSenderId: "874240075946",
+        appId: "1:874240075946:web:91e21678f4779060c6c8d3",
+        measurementId: "G-E3QYQJ9LDQ"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const { createApp, ref: vueRef, onMounted, computed } = Vue;
+
+    // Sign in anonymously untuk akses database
+    let isAuthReady = false;
+    signInAnonymously(auth)
+        .then(() => {
+            console.log('✓ Website authenticated to Firebase (Anonymous)');
+            isAuthReady = true;
+        })
+        .catch((error) => {
+            console.error('✗ Auth error:', error);
+            alert('Error connecting to Firebase. Please refresh the page.');
+        });
+
+    createApp({
+        setup() {
+            const view = vueRef('home');
+            const form = vueRef({ nama: '', wa: '', pass: '' });
+            const isScanning = vueRef(false);
+            const scanSuccess = vueRef(false);
+            const tempUid = vueRef('');
+            const logs = vueRef([]);
+            const users = vueRef({});
+            
+            // User Search (untuk halaman logs non-admin)
+            const userPhone = vueRef('');
+            const userSearchResult = vueRef(null);
+            const userFilteredLogs = vueRef([]);
+            
+            // Admin
+            const isAdminLoggedIn = vueRef(false);
+            const adminForm = vueRef({ username: '', password: '' });
+            const searchPhone = vueRef('');
+            const searchResult = vueRef(null);
+            const filteredLogs = vueRef([]);
+            
+            // Notification Config
+            const notifConfig = vueRef({
+                whatsapp: {
+                    enabled: false,
+                    token: '',
+                    url: ''
+                },
+                telegram: {
+                    enabled: false,
+                    token: '',
+                    chatId: ''
+                }
+            });
+
+            // Voucher System
+            const vouchers = vueRef({});
+            const voucherForm = vueRef({ nominal: '50000', jumlah: 1, catatan: '' });
+            const voucherFilter = vueRef('ALL');
+            const voucherCode = vueRef('');
+            const topupUserPhone = vueRef('');
+            const topupUserData = vueRef(null);
+            const topupSuccess = vueRef(null);
+            const topupHistory = vueRef([]);
+
+            // Stats
+            const totalUsers = computed(() => Object.keys(users.value).length);
+            const totalLogs = computed(() => logs.value.length);
+            const currentParked = computed(() => {
+                return Object.values(users.value).filter(u => u.status_terakhir === 'MASUK').length;
+            });
+
+            // === ADMIN FUNCTIONS ===
+            const loginAdmin = () => {
+                // Default: admin / admin123
+                if (adminForm.value.username === 'admin' && adminForm.value.password === 'admin123') {
+                    isAdminLoggedIn.value = true;
+                    view.value = 'admin-dashboard';
+                    adminForm.value = { username: '', password: '' };
+                } else {
+                    alert('Username atau password salah!');
+                }
+            };
+
+            const logoutAdmin = () => {
+                isAdminLoggedIn.value = false;
+                view.value = 'home';
+            };
+
+            // === USER SEARCH FUNCTIONS (untuk halaman logs non-admin) ===
+            const searchUserData = async () => {
+                const usersSnapshot = await get(ref(db, 'users'));
+                const allUsers = usersSnapshot.val() || {};
+                
+                let foundUser = null;
+                let foundUid = null;
+                
+                for (const [uid, userData] of Object.entries(allUsers)) {
+                    if (userData.wa === userPhone.value) {
+                        foundUser = userData;
+                        foundUid = uid;
+                        break;
+                    }
+                }
+
+                if (foundUser) {
+                    userSearchResult.value = {
+                        ...foundUser,
+                        uid: foundUid
+                    };
+                    
+                    // Filter logs by UID
+                    userFilteredLogs.value = logs.value.filter(log => log.uid === foundUid);
+                } else {
+                    alert('Nomor telepon tidak terdaftar! Pastikan Anda sudah melakukan registrasi.');
+                    userSearchResult.value = null;
+                    userFilteredLogs.value = [];
+                }
+            };
+
+            const clearUserSearch = () => {
+                userPhone.value = '';
+                userSearchResult.value = null;
+                userFilteredLogs.value = [];
+            };
+
+            const searchUserByPhone = async () => {
+                const usersSnapshot = await get(ref(db, 'users'));
+                const allUsers = usersSnapshot.val() || {};
+                
+                let foundUser = null;
+                let foundUid = null;
+                
+                for (const [uid, userData] of Object.entries(allUsers)) {
+                    if (userData.wa === searchPhone.value) {
+                        foundUser = userData;
+                        foundUid = uid;
+                        break;
+                    }
+                }
+
+                if (foundUser) {
+                    searchResult.value = {
+                        ...foundUser,
+                        uid: foundUid
+                    };
+                    
+                    // Filter logs by UID
+                    filteredLogs.value = logs.value.filter(log => log.uid === foundUid);
+                } else {
+                    alert('User dengan nomor WA tersebut tidak ditemukan!');
+                    searchResult.value = null;
+                    filteredLogs.value = [];
+                }
+            };
+
+            const viewUserLogs = (uid, wa) => {
+                searchPhone.value = wa;
+                view.value = 'admin-search';
+                setTimeout(() => searchUserByPhone(), 100);
+            };
+
+            const saveNotificationConfig = async () => {
+                try {
+                    await set(ref(db, 'config/notifications'), notifConfig.value);
+                    alert('Konfigurasi notifikasi berhasil disimpan!');
+                } catch (err) {
+                    alert('Error: ' + err.message);
+                }
+            };
+
+            // === SEND NOTIFICATION (dipanggil dari ESP32 saat checkout) ===
+            const sendNotification = async (userData, logData) => {
+                if (notifConfig.value.whatsapp.enabled) {
+                    await sendWhatsAppNotif(userData, logData);
+                }
+                if (notifConfig.value.telegram.enabled) {
+                    await sendTelegramNotif(userData, logData);
+                }
+            };
+
+            const sendWhatsAppNotif = async (user, log) => {
+                const message = `Halo *${user.nama}*!\nAnda telah keluar dari parkir pada ${log.waktu}.\nTarif: Rp ${formatRupiah(log.biaya)}\nSisa saldo: Rp ${formatRupiah(user.saldo)}\n\nTerima kasih! - SISTER PARKIR`;
+                
+                // Implementasi sesuai provider (Fonnte, Wablas, etc)
+                try {
+                    const response = await fetch(notifConfig.value.whatsapp.url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': notifConfig.value.whatsapp.token
+                        },
+                        body: JSON.stringify({
+                            target: user.wa,
+                            message: message
+                        })
+                    });
+                    console.log('WhatsApp sent:', await response.json());
+                } catch (err) {
+                    console.error('WhatsApp error:', err);
+                }
+            };
+
+            const sendTelegramNotif = async (user, log) => {
+                const message = `🚗 *SISTER PARKIR*\n\nHalo ${user.nama}!\nKeluar: ${log.waktu}\nTarif: Rp ${formatRupiah(log.biaya)}\nSaldo: Rp ${formatRupiah(user.saldo)}`;
+                
+                try {
+                    const url = `https://api.telegram.org/bot${notifConfig.value.telegram.token}/sendMessage`;
+                    await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            chat_id: notifConfig.value.telegram.chatId,
+                            text: message,
+                            parse_mode: 'Markdown'
+                        })
+                    });
+                } catch (err) {
+                    console.error('Telegram error:', err);
+                }
+            };
+
+            // === USER REGISTRATION ===
+            const triggerScan = () => {
+                if (!isAuthReady) {
+                    alert('Please wait, connecting to Firebase...');
+                    return;
+                }
+                
+                isScanning.value = true;
+                scanSuccess.value = false;
+                
+                console.log('Setting mode to REGISTER...');
+                set(ref(db, 'system/mode'), 'REGISTER')
+                    .then(() => console.log('✓ Mode set to REGISTER'))
+                    .catch(err => console.error('✗ Error setting mode:', err));
+                    
+                set(ref(db, 'system/temp_rfid'), '')
+                    .then(() => console.log('✓ temp_rfid cleared'))
+                    .catch(err => console.error('✗ Error clearing temp_rfid:', err)); 
+
+                const tempRef = ref(db, 'system/temp_rfid');
+                const unsubscribe = onValue(tempRef, (snapshot) => {
+                    const uid = snapshot.val();
+                    if (uid && uid !== "" && isScanning.value) {
+                        tempUid.value = uid;
+                        scanSuccess.value = true;
+                        
+                        setTimeout(() => {
+                            saveFinalData(uid);
+                            unsubscribe();
+                        }, 1500);
+                    }
+                });
+            };
+
+            const saveFinalData = (uid) => {
+                const newUser = {
+                    nama: form.value.nama,
+                    wa: form.value.wa,
+                    password: form.value.pass,
+                    saldo: 50000,
+                    status_terakhir: 'BARU'
+                };
+
+                set(ref(db, 'users/' + uid), newUser)
+                .then(() => {
+                    set(ref(db, 'system/mode'), 'NORMAL');
+                    set(ref(db, 'system/temp_rfid'), '');
+                    
+                    isScanning.value = false;
+                    view.value = 'home';
+                    form.value = { nama: '', wa: '', pass: '' };
+                    alert("User berhasil didaftarkan!");
+                });
+            };
+
+            const cancelScan = () => {
+                isScanning.value = false;
+                set(ref(db, 'system/mode'), 'NORMAL');
+            };
+
+            // === MONITORING ===
+            onMounted(() => {
+                // Load users
+                const usersRef = ref(db, 'users');
+                onValue(usersRef, (snapshot) => {
+                    users.value = snapshot.val() || {};
+                });
+
+                // Load logs
+                const logRef = ref(db, 'logs');
+                onValue(logRef, (snapshot) => {
+                    const data = snapshot.val();
+                    if(data) {
+                        const arr = Object.keys(data).map(key => ({
+                            id: key,
+                            ...data[key]
+                        }));
+                        logs.value = arr.sort((a,b) => b.timestamp - a.timestamp);
+                        
+                        // Update user filtered logs if user is logged in
+                        if (userSearchResult.value) {
+                            userFilteredLogs.value = logs.value.filter(log => log.uid === userSearchResult.value.uid);
+                        }
+                    } else {
+                        logs.value = [];
+                    }
+                });
+
+                // Load vouchers
+                const vouchersRef = ref(db, 'vouchers');
+                onValue(vouchersRef, (snapshot) => {
+                    vouchers.value = snapshot.val() || {};
+                });
+
+                // Load notification config
+                const configRef = ref(db, 'config/notifications');
+                onValue(configRef, (snapshot) => {
+                    const config = snapshot.val();
+                    if (config) {
+                        notifConfig.value = config;
+                    }
+                });
+
+                // Listen for checkout events to send notifications
+                onValue(logRef, (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        const latestLog = Object.values(data).sort((a, b) => b.timestamp - a.timestamp)[0];
+                        
+                        // If it's a checkout, send notification
+                        if (latestLog && latestLog.status === 'Check-Out' && latestLog.uid) {
+                            get(ref(db, `users/${latestLog.uid}`)).then((userSnap) => {
+                                const userData = userSnap.val();
+                                if (userData) {
+                                    sendNotification(userData, latestLog);
+                                }
+                            });
+                        }
+                    }
+                });
+            });
+
+            // === VOUCHER FUNCTIONS ===
+            const generateVoucher = async () => {
+                if (!isAuthReady) {
+                    alert('Please wait, connecting to Firebase...');
+                    return;
+                }
+
+                const nominal = parseInt(voucherForm.value.nominal);
+                const jumlah = voucherForm.value.jumlah;
+                const catatan = voucherForm.value.catatan;
+
+                const confirmed = confirm(`Generate ${jumlah} voucher dengan nominal Rp ${formatRupiah(nominal)}?`);
+                if (!confirmed) return;
+
+                try {
+                    for (let i = 0; i < jumlah; i++) {
+                        const voucherId = 'V' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+                        const kode = 'PARKV-' + 
+                                     Math.random().toString(36).substr(2, 4).toUpperCase() + '-' +
+                                     Math.random().toString(36).substr(2, 4).toUpperCase() + '-' +
+                                     Math.random().toString(36).substr(2, 4).toUpperCase();
+
+                        await set(ref(db, `vouchers/${voucherId}`), {
+                            nominal: nominal,
+                            kode: kode,
+                            status: 'ACTIVE',
+                            created_by: 'admin',
+                            created_at: Math.floor(Date.now() / 1000),
+                            catatan: catatan,
+                            used_by: null,
+                            used_by_name: null,
+                            used_at: null
+                        });
+
+                        // Small delay to avoid duplicate timestamps
+                        await new Promise(resolve => setTimeout(resolve, 10));
+                    }
+
+                    alert(`✓ Berhasil generate ${jumlah} voucher!`);
+                    voucherForm.value = { nominal: '50000', jumlah: 1, catatan: '' };
+                } catch (error) {
+                    console.error('Error generating voucher:', error);
+                    alert('✗ Gagal generate voucher: ' + error.message);
+                }
+            };
+
+            const deleteVoucher = async (voucherId) => {
+                const confirmed = confirm('Hapus voucher ini?');
+                if (!confirmed) return;
+
+                try {
+                    await set(ref(db, `vouchers/${voucherId}`), null);
+                    alert('✓ Voucher berhasil dihapus!');
+                } catch (error) {
+                    console.error('Error deleting voucher:', error);
+                    alert('✗ Gagal menghapus voucher: ' + error.message);
+                }
+            };
+
+            const copyToClipboard = (text) => {
+                navigator.clipboard.writeText(text).then(() => {
+                    alert('✓ Kode voucher berhasil di-copy: ' + text);
+                }).catch(err => {
+                    console.error('Copy failed:', err);
+                    alert('Kode: ' + text);
+                });
+            };
+
+            const showTopupPrompt = () => {
+                const phone = prompt('Masukkan Nomor WhatsApp Anda (08xxxxxxxxx):');
+                if (!phone) return;
+
+                topupUserPhone.value = phone;
+                loadTopupUserData(phone);
+            };
+
+            const loadTopupUserData = async (phone) => {
+                try {
+                    const usersSnapshot = await get(ref(db, 'users'));
+                    const allUsers = usersSnapshot.val() || {};
+                    
+                    let foundUser = null;
+                    let foundUid = null;
+                    
+                    for (const [uid, userData] of Object.entries(allUsers)) {
+                        if (userData.wa === phone) {
+                            foundUser = userData;
+                            foundUid = uid;
+                            break;
+                        }
+                    }
+
+                    if (foundUser) {
+                        topupUserData.value = { ...foundUser, uid: foundUid };
+                        view.value = 'topup';
+                        loadTopupHistory(foundUid);
+                    } else {
+                        alert('Nomor WhatsApp tidak terdaftar!');
+                    }
+                } catch (error) {
+                    console.error('Error loading user:', error);
+                    alert('✗ Gagal memuat data user');
+                }
+            };
+
+            const loadTopupHistory = async (uid) => {
+                try {
+                    const topupsSnapshot = await get(ref(db, 'top_ups'));
+                    const allTopups = topupsSnapshot.val() || {};
+                    
+                    topupHistory.value = Object.values(allTopups)
+                        .filter(t => t.uid === uid)
+                        .sort((a, b) => b.timestamp - a.timestamp);
+                } catch (error) {
+                    console.error('Error loading history:', error);
+                }
+            };
+
+            const redeemVoucher = async () => {
+                if (!voucherCode.value) {
+                    alert('Masukkan kode voucher!');
+                    return;
+                }
+
+                try {
+                    const vouchersSnapshot = await get(ref(db, 'vouchers'));
+                    const allVouchers = vouchersSnapshot.val() || {};
+                    
+                    let foundVoucher = null;
+                    let foundVoucherId = null;
+                    
+                    // Find voucher by code
+                    for (const [vId, vData] of Object.entries(allVouchers)) {
+                        if (vData.kode.toUpperCase() === voucherCode.value.toUpperCase()) {
+                            foundVoucher = vData;
+                            foundVoucherId = vId;
+                            break;
+                        }
+                    }
+
+                    if (!foundVoucher) {
+                        alert('✗ Kode voucher tidak valid!');
+                        return;
+                    }
+
+                    if (foundVoucher.status !== 'ACTIVE') {
+                        alert('✗ Voucher sudah digunakan!');
+                        return;
+                    }
+
+                    // Update user saldo
+                    const newSaldo = topupUserData.value.saldo + foundVoucher.nominal;
+                    await update(ref(db, `users/${topupUserData.value.uid}`), {
+                        saldo: newSaldo,
+                        saldo_updated_at: Math.floor(Date.now() / 1000)
+                    });
+
+                    // Mark voucher as used
+                    await update(ref(db, `vouchers/${foundVoucherId}`), {
+                        status: 'USED',
+                        used_by: topupUserData.value.uid,
+                        used_by_name: topupUserData.value.nama,
+                        used_at: Math.floor(Date.now() / 1000)
+                    });
+
+                    // Save top-up history
+                    const timestamp = Math.floor(Date.now() / 1000);
+                    await set(ref(db, `top_ups/${timestamp}_${topupUserData.value.uid}`), {
+                        uid: topupUserData.value.uid,
+                        nominal: foundVoucher.nominal,
+                        voucher_kode: foundVoucher.kode,
+                        timestamp: timestamp,
+                        status: 'SUCCESS'
+                    });
+
+                    // Show success
+                    topupSuccess.value = {
+                        nominal: foundVoucher.nominal,
+                        saldoBaru: newSaldo
+                    };
+
+                    // Update local data
+                    topupUserData.value.saldo = newSaldo;
+                    voucherCode.value = '';
+
+                    // Reload history
+                    loadTopupHistory(topupUserData.value.uid);
+
+                    // Clear success message after 5 seconds
+                    setTimeout(() => {
+                        topupSuccess.value = null;
+                    }, 5000);
+
+                } catch (error) {
+                    console.error('Error redeeming voucher:', error);
+                    alert('✗ Gagal redeem voucher: ' + error.message);
+                }
+            };
+
+            const filteredVouchers = computed(() => {
+                const all = vouchers.value;
+                if (voucherFilter.value === 'ALL') return all;
+                
+                return Object.fromEntries(
+                    Object.entries(all).filter(([_, v]) => v.status === voucherFilter.value)
+                );
+            });
+
+            const formatRupiah = (angka) => {
+                return new Intl.NumberFormat('id-ID').format(angka);
+            };
+
+            const formatDate = (timestamp) => {
+                const date = new Date(timestamp * 1000);
+                return date.toLocaleDateString('id-ID');
+            };
+
+            return {
+                view, form, isScanning, scanSuccess, tempUid, logs, users,
+                userPhone, userSearchResult, userFilteredLogs,
+                isAdminLoggedIn, adminForm, searchPhone, searchResult, filteredLogs,
+                notifConfig, totalUsers, totalLogs, currentParked,
+                vouchers, voucherForm, voucherFilter, voucherCode,
+                topupUserPhone, topupUserData, topupSuccess, topupHistory,
+                filteredVouchers,
+                triggerScan, cancelScan, formatRupiah, formatDate,
+                loginAdmin, logoutAdmin, searchUserByPhone, viewUserLogs,
+                saveNotificationConfig, searchUserData, clearUserSearch,
+                generateVoucher, deleteVoucher, copyToClipboard,
+                showTopupPrompt, redeemVoucher
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
