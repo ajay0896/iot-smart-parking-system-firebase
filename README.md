@@ -22,12 +22,14 @@ Project ini merupakan implementasi sistem parkir pintar yang mengintegrasikan ha
 - ✅ Check-in otomatis dengan tap kartu
 - ✅ Check-out otomatis dengan perhitungan biaya
 - ✅ Manajemen saldo digital
+- ✅ **Top-up saldo menggunakan voucher** 🆕
 - ✅ Riwayat parkir real-time
 - ✅ Notifikasi WhatsApp/Telegram (opsional)
 
 ### 👨‍💼 Untuk Admin
 - ✅ Dashboard monitoring real-time
 - ✅ Manajemen pengguna
+- ✅ **Generate & kelola voucher top-up** 🆕
 - ✅ Laporan transaksi lengkap
 - ✅ Pencarian data per user
 - ✅ Konfigurasi sistem
@@ -37,6 +39,7 @@ Project ini merupakan implementasi sistem parkir pintar yang mengintegrasikan ha
 - **Real-time Sync**: Update data langsung via Firebase
 - **Secure Authentication**: Firebase Auth untuk ESP32 dan website
 - **Responsive Design**: Bootstrap 5 untuk tampilan modern
+- **Top-Up System**: Voucher-based saldo management 🆕
 
 ## 🏗️ Arsitektur Sistem
 
@@ -140,6 +143,20 @@ cd iot-smart-parking-system-firebase
 6. Import database structure dari `firebase/database-structure.json`
 7. Update database rules dari `firebase/database-rules.json`
 
+**Untuk fitur Top-Up (index-with-topup.html), pastikan rules mencakup:**
+```json
+"vouchers": {
+  ".read": "auth != null",
+  ".write": "auth != null",
+  ".indexOn": ["kode", "status"]
+},
+"top_ups": {
+  ".read": "auth != null",
+  ".write": "auth != null",
+  ".indexOn": ["uid", "timestamp"]
+}
+```
+
 Panduan lengkap: [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md)
 
 ### 3. Upload Kode ESP32
@@ -166,10 +183,22 @@ Panduan lengkap: [docs/ESP32_GUIDE.md](docs/ESP32_GUIDE.md)
 
 ### 4. Jalankan Website
 
+#### Pilihan Versi Website 🆕
+Tersedia **2 versi website**:
+
+| File | Deskripsi |
+|------|-----------|
+| **index.html** | Versi asli (tanpa fitur top-up) |
+| **index-with-topup.html** | Versi dengan top-up voucher 🆕 |
+
+👉 **[Baca FILE_VERSIONS.md](FILE_VERSIONS.md) untuk panduan memilih versi**
+
 #### Live Server (Recommended)
 1. Install [VS Code](https://code.visualstudio.com/)
 2. Install extension "Live Server"
-3. Buka `public/index.html`
+3. Pilih salah satu versi:
+   - `public/index.html` (standar)
+   - `index-with-topup.html` (dengan top-up)
 4. Klik kanan → "Open with Live Server"
 
 #### Python HTTP Server
@@ -197,19 +226,10 @@ iot-smart-parking-system-firebase/
 │   └── ESP32_HARDWARE_TEST.ino # Test hardware
 │
 ├── public/                     # Website files
-│   ├── index.html             # Main HTML
-│   ├── css/
-│   │   └── style.css          # Custom styles
-│   └── js/
-│       ├── app.js             # Vue.js app (inline dalam HTML)
-│       └── firebase-config.js # Firebase config
+│   ├── index.html             # Versi standar
+│   └── css/, js/              # Assets
 │
-├── docs/                       # Dokumentasi
-│   ├── FIREBASE_SETUP.md      # Setup Firebase
-│   ├── ESP32_GUIDE.md         # Panduan ESP32
-│   ├── QUICK_START.md         # Quick start
-│   ├── TROUBLESHOOTING.md     # Troubleshooting
-│   └── ARCHITECTURE.md        # Arsitektur detail
+├── index-with-topup.html       # Versi dengan top-up voucher 🆕
 │
 ├── firebase/                   # Firebase configuration
 │   ├── database-rules.json    # Database security rules
@@ -258,6 +278,16 @@ iot-smart-parking-system-firebase/
    3. Lihat histori check-in/check-out
    ```
 
+5. **Top-Up Saldo** 🆕 (versi index-with-topup.html)
+   ```
+   1. Menu → Top-Up Saldo
+   2. Input nomor WA
+   3. Input kode voucher dari admin
+   4. Klik Redeem Voucher
+   5. Saldo langsung bertambah!
+   6. Lihat riwayat top-up
+   ```
+
 ### Untuk Admin
 
 1. **Login Admin**
@@ -276,10 +306,24 @@ iot-smart-parking-system-firebase/
    - Cek saldo user
    - Filter by nomor WA
 
-4. **Laporan**
-   - Semua transaksi
-   - Filter per user
-   - Export data
+4. **Generate Voucher** 🆕 (versi index-with-topup.html)
+   ```
+   Menu → Kelola Voucher
+   - Pilih nominal voucher
+   - Tentukan jumlah yang dibuat
+   - Klik Generate
+   - Copy kode voucher
+   - Bagikan ke user
+   ```
+
+5. **Monitor Penggunaan Voucher** 🆕
+   ```
+   Lihat tabel voucher:
+   - Kode voucher
+   - Status (ACTIVE/USED)
+   - Siapa yang menggunakan
+   - Kapan digunakan
+   ```
 
 ## 🧪 Testing
 
@@ -317,6 +361,8 @@ iot-smart-parking-system-firebase/
 - 🔧 [Troubleshooting](docs/TROUBLESHOOTING.md)
 - 👨‍💼 [Admin Guide](docs/ADMIN_GUIDE.md)
 - 👤 [User Guide](docs/USER_LOGIN_GUIDE.md)
+- 🎫 [Top-Up Voucher Guide](docs/TOPUP_VOUCHER_GUIDE.md) 🆕
+- 📋 [File Versions](FILE_VERSIONS.md) 🆕
 
 ## ⚙️ Konfigurasi
 
