@@ -500,7 +500,7 @@ Lihat [LICENSE](LICENSE) untuk detail.
 
 - 🐛 **Bug Reports**: [GitHub Issues](https://github.com/ajay0896/iot-smart-parking-system-firebase/issues)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/ajay0896/iot-smart-parking-system-firebase/discussions)
-- 📧 **Email**: fajarramdani@example.com
+- 📧 **Email**: framdani220@gmail.com
 - 📱 **WhatsApp**: +62 896-6395-6717
 
 ## 🌟 Star History
