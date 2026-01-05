@@ -452,14 +452,21 @@ Troubleshooting lengkap: [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
     <td align="center">
       <a href="https://github.com/Bivvean">
         <img src="https://github.com/Bivvean.png" width="100px;" alt="Bilal"/><br />
-        <sub><b>Bilal</b></sub>
+        <sub><b>Nabila Aulia</b></sub>
       </a><br />
       <sub>Contributor</sub>
     </td>
     <td align="center">
       <a href="https://github.com/naysal37">
         <img src="https://github.com/naysal37.png" width="100px;" alt="Naysal"/><br />
-        <sub><b>Naysal</b></sub>
+        <sub><b>Nayla Salsabila</b></sub>
+      </a><br />
+      <sub>Contributor</sub>
+    </td>
+    <td align="center">
+      <a href="https://github.com/rarasputri19">
+        <img src="https://github.com/rarasputri19.png" width="100px;" alt="Rara Sputri"/><br />
+        <sub><b>Rara Sputri</b></sub>
       </a><br />
       <sub>Contributor</sub>
     </td>
